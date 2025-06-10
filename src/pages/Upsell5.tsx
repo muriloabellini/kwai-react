@@ -43,7 +43,11 @@ const Upsell5 = () => {
 
   // Função para verificar status do pagamento
   const checkPaymentStatus = async (transactionId: string) => {
-    try {
+     try {
+
+      const utmParamsString = localStorage.getItem("utm_params");
+      const utmParams = utmParamsString ? JSON.parse(utmParamsString) : {};
+
       const response = await fetch("https://cdn.parceiro-digital.shop/PaymentController.php", {
         method: "POST",
         headers: {
@@ -51,7 +55,8 @@ const Upsell5 = () => {
         },
         body: JSON.stringify({
           action: "check_payment",
-          payment_id: transactionId
+          payment_id: transactionId ,
+          utmQuery: JSON.stringify(utmParams),
         })
       });
       
