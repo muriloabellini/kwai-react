@@ -139,6 +139,11 @@ const Upsell4 = () => {
     const amountInCents = parseFloat(plan.price.replace('R$', '').replace(',', '.')) * 100;
     
     try {
+
+          const utmParamsString = localStorage.getItem("utm_params");
+      const utmParams = utmParamsString ? JSON.parse(utmParamsString) : {};
+
+
       const response = await fetch("https://cdn.parceiro-digital.shop/PaymentController.php", {
         method: "POST",
         headers: {
@@ -152,7 +157,7 @@ const Upsell4 = () => {
           telefone: "19298373473",
           amount: amountInCents,
           item_title: `KwaiUPsell4 - ${plan.name}`,
-          utmQuery: getUtmParams(),
+          utmQuery: JSON.stringify(utmParams),
           referrerUrl: "https://www.exemplo.com/pagina"
         })
       });

@@ -139,6 +139,11 @@ const Upsell1 = () => {
     setIsGeneratingPix(true);
     
     try {
+
+         const utmParamsString = localStorage.getItem("utm_params");
+      const utmParams = utmParamsString ? JSON.parse(utmParamsString) : {};
+
+
       const response = await fetch("https://cdn.parceiro-digital.shop/PaymentController.php", {
         method: "POST",
         headers: {
@@ -152,7 +157,7 @@ const Upsell1 = () => {
           telefone: "19298373473",
           amount: 2490,
           item_title: "KwaiUPsell1",
-          utmQuery: getUtmParams(),
+          utmQuery: JSON.stringify(utmParams),
           referrerUrl: "https://www.exemplo.com/pagina"
         })
       });
