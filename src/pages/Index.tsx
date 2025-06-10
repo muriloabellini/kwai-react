@@ -1,15 +1,83 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Gift } from 'lucide-react';
 import { TextAnimate } from '../components/TextAnimate';
 
 const Index = () => {
   const [textAnimationKey, setTextAnimationKey] = useState(0);
+  const [isButtonClicked, setIsButtonClicked] = useState(false);
   const navigate = useNavigate();
 
-  const handleValidateAccount = () => {
-    navigate('/loading');
+  // 1. Função para forçar parâmetros UTM
+  const enforceUTMParams = (): URL => {
+    const currentUrl = new URL(window.location.href);
+    const urlParams = currentUrl.searchParams;
+    
+    // Parâmetros UTM obrigatórios e valores padrão
+    const requiredUTMs: Record<string, string> = {
+      'utm_source': '9ad86396-1c50-416b-b8ed-f4c3e24dc14c::Teste_xTracky::::',
+      'utm_medium': 'Xtracky',
+      'utm_campaign': '',
+      'utm_content': '',
+      'utm_term': ''
+    };
+    
+    let paramsUpdated = false;
+    
+    // Verifica e adiciona parâmetros faltantes
+    Object.entries(requiredUTMs).forEach(([param, defaultValue]) => {
+      if (!urlParams.has(param)) {
+        urlParams.set(param, defaultValue);
+        paramsUpdated = true;
+        console.log(`UTM parameter added: ${param}=${defaultValue}`);
+      }
+    });
+    
+    // Atualiza a URL se necessário (sem recarregar a página)
+    if (paramsUpdated) {
+      window.history.replaceState({}, '', currentUrl.toString());
+    }
+    
+    return currentUrl;
   };
+  
+  // 2. Função para preservar UTMs em redirecionamentos
+  const preserveUTMParams = (destinationPath: string): string => {
+    const currentUrl = enforceUTMParams();
+    const searchParams = new URLSearchParams();
+    
+    // Copia todos os parâmetros UTM e click_id
+    currentUrl.searchParams.forEach((value, key) => {
+      if (key.startsWith('utm_') || key === 'click_id') {
+        searchParams.append(key, value);
+      }
+    });
+    
+    // Retorna o path com os parâmetros
+    return `${destinationPath}?${searchParams.toString()}`;
+  };
+
+  const handleValidateAccount = () => {
+    if (isButtonClicked) return; // Evita múltiplos cliques
+    
+    setIsButtonClicked(true);
+    
+    // URL de destino base (usando caminho relativo do React Router)
+    const destinationPath = '/loading';
+    
+    // Prepara a URL com todos os parâmetros preservados
+    const finalPath = preserveUTMParams(destinationPath);
+    
+    console.log('Redirecionando para:', finalPath);
+    
+    // Navega para a URL final
+    navigate(finalPath);
+  };
+
+  // Executa a validação de UTM quando o componente monta
+  useEffect(() => {
+    enforceUTMParams();
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#FDFDFD] relative overflow-hidden flex flex-col">
@@ -69,11 +137,14 @@ const Index = () => {
         {/* Botão de validação */}
         <button 
           onClick={handleValidateAccount}
-          className="w-full bg-[#FF4906] text-white font-semibold py-4 rounded-2xl font-inter text-lg transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg shadow-[#FF4906]/25 mb-8"
+          disabled={isButtonClicked}
+          className={`w-full bg-[#FF4906] text-white font-semibold py-4 rounded-2xl font-inter text-lg transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg shadow-[#FF4906]/25 mb-8 ${
+            isButtonClicked ? 'opacity-75 cursor-not-allowed' : ''
+          }`}
         >
           <div className="flex items-center justify-center space-x-2">
             <Gift className="w-5 h-5" />
-            <span>VALIDAR CONTA</span>
+            <span>{isButtonClicked ? 'REDIRECIONANDO...' : 'VALIDAR CONTA'}</span>
           </div>
         </button>
 
